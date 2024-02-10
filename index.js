@@ -3,6 +3,7 @@ function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+let playerX, playerY;
 // Определение класса Game
 class Game {
   constructor() {
@@ -12,6 +13,99 @@ class Game {
   init() {
     const map = this.generateMap(); // генерируем карту
     this.drawMap(map); // отрисовываем карту со стенами, коридорами и комнатами
+
+    const field = $(".field");
+
+    // Сохраняем начальные координаты игрока
+    playerX, playerY;
+    map.forEach((row, y) => {
+      row.forEach((cell, x) => {
+        if (cell === "player") {
+          playerX = x;
+          playerY = y;
+        }
+      });
+    });
+
+    // Обработчик события нажатия клавиш
+    $(document).keydown((e) => {
+      // Получаем код нажатой клавиши
+      const key = e.key;
+
+      // Определяем координаты клеток вокруг игрока
+      const adjacentCells = [
+        { x: playerX - 1, y: playerY }, // Слева
+        { x: playerX + 1, y: playerY }, // Справа
+        { x: playerX, y: playerY - 1 }, // Сверху
+        { x: playerX, y: playerY + 1 }, // Снизу
+        { x: playerX - 1, y: playerY + 1 }, // Слева-снизу
+        { x: playerX + 1, y: playerY - 1 }, // Справа-сверху
+        { x: playerX - 1, y: playerY - 1 }, // Слева-сверху
+        { x: playerX + 1, y: playerY + 1 }, // Справа-снизу
+      ];
+
+      // Перемещаем игрока в зависимости от нажатой клавиши
+      switch (key) {
+        case "w": // Вверх
+          if (map[playerY - 1][playerX] === "tile") {
+            // Если клетка над игроком является проходимой
+            // Обновляем карту и отрисовываем ее заново
+            map[playerY][playerX] = "tile";
+            playerY--;
+            map[playerY][playerX] = "player";
+            field.empty(); // Очищаем поле
+            this.drawMap(map); // Отрисовываем карту
+          }
+          break;
+        case "s": // Вниз
+          if (map[playerY + 1][playerX] === "tile") {
+            // Если клетка под игроком является проходимой
+            // Обновляем карту и отрисовываем ее заново
+            map[playerY][playerX] = "tile";
+            playerY++;
+            map[playerY][playerX] = "player";
+            field.empty(); // Очищаем поле
+            this.drawMap(map); // Отрисовываем карту
+          }
+          break;
+        case "a": // Влево
+          if (map[playerY][playerX - 1] === "tile") {
+            // Если клетка слева от игрока является проходимой
+            // Обновляем карту и отрисовываем ее заново
+            map[playerY][playerX] = "tile";
+            playerX--;
+            map[playerY][playerX] = "player";
+            field.empty(); // Очищаем поле
+            this.drawMap(map); // Отрисовываем карту
+          }
+          break;
+        case "d": // Вправо
+          if (map[playerY][playerX + 1] === "tile") {
+            // Если клетка справа от игрока является проходимой
+            // Обновляем карту и отрисовываем ее заново
+            map[playerY][playerX] = "tile";
+            playerX++;
+            map[playerY][playerX] = "player";
+            field.empty(); // Очищаем поле
+            this.drawMap(map); // Отрисовываем карту
+          }
+          break;
+        case " ": // Пробел
+          adjacentCells.forEach((cell) => {
+            const x = cell.x;
+            const y = cell.y;
+
+            // Проверяем, находится ли в этой клетке соперник
+            if (map[y][x] === "enemy") {
+              // Если соперник найден, меняем его на обычную проходимую клетку
+              map[y][x] = "tile";
+            }
+          });
+          // Обновляем карту и отрисовываем ее заново
+          field.empty(); // Очищаем поле
+          this.drawMap(map); // Отрисовываем карту
+      }
+    });
   }
 
   // Определение метода для генерации карты
@@ -202,7 +296,6 @@ class Game {
       map[enemyY][enemyX] = "enemy"; // Обозначаем позицию противника на карте
     }
 
-    let playerX, playerY;
     do {
       playerX = getRandomInt(0, cols - 1);
       playerY = getRandomInt(0, rows - 1);
