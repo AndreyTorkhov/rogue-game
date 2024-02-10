@@ -171,6 +171,44 @@ class Game {
       }
     }
 
+    const numSwords = 2; // Количество мечей
+    const numPotions = 10; // Количество зелий
+    const numEnemys = 10; //Количество противников
+
+    for (let i = 0; i < numSwords; i++) {
+      let swordX, swordY;
+      do {
+        swordX = getRandomInt(0, cols - 1);
+        swordY = getRandomInt(0, rows - 1);
+      } while (map[swordY][swordX] !== "tile"); // Проверяем, что выбранная позиция находится в проходимой области
+      map[swordY][swordX] = "sword"; // Обозначаем позицию меча на карте
+    }
+
+    for (let i = 0; i < numPotions; i++) {
+      let potionX, potionY;
+      do {
+        potionX = getRandomInt(0, cols - 1);
+        potionY = getRandomInt(0, rows - 1);
+      } while (map[potionY][potionX] !== "tile"); // Проверяем, что выбранная позиция находится в проходимой области
+      map[potionY][potionX] = "potion"; // Обозначаем позицию зелья на карте
+    }
+
+    for (let i = 0; i < numEnemys; i++) {
+      let enemyX, enemyY;
+      do {
+        enemyX = getRandomInt(0, cols - 1);
+        enemyY = getRandomInt(0, rows - 1);
+      } while (map[enemyY][enemyX] !== "tile"); // Проверяем, что выбранная позиция находится в проходимой области
+      map[enemyY][enemyX] = "enemy"; // Обозначаем позицию противника на карте
+    }
+
+    let playerX, playerY;
+    do {
+      playerX = getRandomInt(0, cols - 1);
+      playerY = getRandomInt(0, rows - 1);
+    } while (map[playerY][playerX] !== "tile"); // Проверяем, что выбранная позиция находится в проходимой области
+    map[playerY][playerX] = "player"; // Обозначаем позицию игрока на карте
+
     return map;
   }
 
@@ -184,6 +222,14 @@ class Game {
         tile.addClass("tile");
         if (cell === "wall") {
           tile.addClass("tileW"); // добавляем класс для стены
+        } else if (cell === "sword") {
+          tile.addClass("tileSW"); // добавляем класс для меча
+        } else if (cell === "potion") {
+          tile.addClass("tileHP"); // добавляем класс для зелья
+        } else if (cell === "enemy") {
+          tile.addClass("tileE"); // добавляем класс для зелья
+        } else if (cell === "player") {
+          tile.addClass("tileP"); // добавляем класс для зелья
         }
         tile.css("width", "20px"); // устанавливаем ширину
         tile.css("height", "20px"); // устанавливаем высоту
