@@ -482,8 +482,8 @@ class Game {
           enemyTile.children(".health").css("width", this.enemyHealth + "%");
         } else {
           map[y][x] = "tile"; // Убираем соперника с поля
-          enemyTile.removeClass("tileE"); // Удаляем класс противника
-          enemyTile.addClass("tile"); // Добавляем класс пустой клетки
+          $(".tileE").removeClass("tileE"); // Удаляем класс противника
+          $(".tileE").addClass("tile"); // Добавляем класс пустой клетки
         }
       }
     });
