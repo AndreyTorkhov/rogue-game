@@ -456,15 +456,17 @@ class Game {
   }
 
   attack(map) {
+    const playerPosition = { x: playerX, y: playerY };
+
     const adjacentCells = [
       { x: playerX - 1, y: playerY }, // Слева
       { x: playerX + 1, y: playerY }, // Справа
       { x: playerX, y: playerY - 1 }, // Сверху
       { x: playerX, y: playerY + 1 }, // Снизу
-      { x: playerX - 1, y: playerY + 1 }, // Слева-снизу
-      { x: playerX + 1, y: playerY - 1 }, // Справа-сверху
-      { x: playerX - 1, y: playerY - 1 }, // Слева-сверху
-      { x: playerX + 1, y: playerY + 1 }, // Справа-снизу
+      { x: playerX - 1, y: playerY - 1 }, // Слева
+      { x: playerX + 1, y: playerY + 1 }, // Справа
+      { x: playerX + 1, y: playerY - 1 }, // Сверху
+      { x: playerX - 1, y: playerY + 1 }, // Снизу
     ];
 
     adjacentCells.forEach((cell) => {
@@ -472,23 +474,41 @@ class Game {
       const y = cell.y;
 
       // Проверяем, находится ли в этой клетке соперник
-      if (map[y][x] === "enemy") {
-        if (this.enemyHealth > 0) {
-          const enemyTile = $(".tileE"); // Находим элемент DOM противника
-          // Уменьшаем здоровье противника на 50%
-          this.enemyHealth -= 50;
+      if (map[y] && map[y][x] === "enemy") {
+        const enemyTile = $(".tileE");
+        const enemyPosition = { x: x, y: y };
 
-          // Обновляем здоровье противника на экране
-          enemyTile.children(".health").css("width", this.enemyHealth + "%");
-        } else {
-          map[y][x] = "tile"; // Убираем соперника с поля
-          $(".tileE").removeClass("tileE"); // Удаляем класс противника
-          $(".tileE").addClass("tile"); // Добавляем класс пустой клетки
+        // Рассчитываем расстояние между игроком и противником
+        const distance =
+          Math.abs(playerPosition.x - enemyPosition.x) +
+          Math.abs(playerPosition.y - enemyPosition.y);
+
+        // Если противник находится в зоне поражения 1 клетки от игрока
+        if (distance <= 1) {
+          // Присваиваем класс ".damage" противнику
+          enemyTile.addClass("damage");
+
+          // Убеждаемся, что у противника есть класс ".damage"
+          if (enemyTile.hasClass("damage")) {
+            // Уменьшаем здоровье противника на 50%
+            this.enemyHealth -= 50;
+
+            // Обновляем здоровье противника на экране
+            enemyTile.children(".health").css("width", this.enemyHealth + "%");
+            alert("-50 Xp");
+            if (this.enemyHealth === 0) {
+              map[y][x] = "tile"; // Убираем соперника с поля
+              enemyTile.removeClass("tileE"); // Удаляем класс противника
+              enemyTile.removeClass("damage"); // Удаляем класс ".damage"
+              enemyTile.addClass("tile"); // Добавляем класс пустой клетки
+              this.enemyHealth = 100;
+            }
+          }
         }
       }
     });
 
     // Обновляем карту и отрисовываем ее заново
-    this.drawMap(map); // Отрисовываем карту
+    this.drawMap(map);
   }
 }
