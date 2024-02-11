@@ -10,6 +10,7 @@ class Game {
   constructor() {
     this.playerHealth = 100; // Устанавливаем начальное здоровье игрока
     this.enemyHealth = 100; // Устанавливаем начальное здоровье противников
+    this.playerDamage = 50;
   }
 
   init() {
@@ -36,7 +37,7 @@ class Game {
       const currentTime = new Date().getTime();
 
       // Проверяем, прошла ли секунда с момента последнего нажатия
-      if (currentTime - lastKeyPressTime >= 100) {
+      if (currentTime - lastKeyPressTime >= 250) {
         // Обновляем время последнего нажатия
         lastKeyPressTime = currentTime;
 
@@ -309,6 +310,7 @@ class Game {
     for (let x = startX; x < startX + width; x++) {
       for (let y = startY; y < startY + height; y++) {
         if (x >= 0 && x < map[0].length && y >= 0 && y < map.length) {
+          // Добавляем проверку, чтобы не перезаписывать клетку с зельем
           map[y][x] = "tile"; // Обозначаем проходимую область
         }
       }
@@ -319,25 +321,44 @@ class Game {
     const newX = playerX + deltaX;
     const newY = playerY + deltaY;
 
-    if (
-      newX >= 0 &&
-      newX < map[0].length &&
-      newY >= 0 &&
-      newY < map.length &&
-      map[newY][newX] === "tile"
-    ) {
-      // Удаляем изображение игрока из старой клетки
-      const oldPlayerTile = $(".tileP");
-      oldPlayerTile.removeClass("tileP");
-      oldPlayerTile.addClass("tile"); // Возвращаем клетке класс "tile"
+    if (newX >= 0 && newX < map[0].length && newY >= 0 && newY < map.length) {
+      const newTile = map[newY][newX];
 
-      map[playerY][playerX] = "tile"; // Обновляем карту
-      playerX = newX;
-      playerY = newY;
-      map[playerY][playerX] = "player"; // Обновляем позицию игрока на карте
+      // Проверяем, что новая клетка является проходимой и не содержит врага
+      if (newTile !== "wall" && newTile !== "enemy") {
+        // Удаляем изображение игрока из старой клетки
+        const oldPlayerTile = $(".tileP");
+        oldPlayerTile.removeClass("tileP");
+        oldPlayerTile.addClass("tile"); // Возвращаем клетке класс "tile"
 
-      this.moveEnemies(map);
-      this.drawMap(map); // Отрисовываем карту после перемещения игрока
+        if (newTile === "potion") {
+          // Плитка с зельем - лечим игрока
+          const playerTile = $(".tileP"); // Выбираем только элемент игрока на текущей клетке
+          this.playerHealth = 100; // Предполагается, что 100 - максимальное здоровье
+          playerTile.children(".health").css("width", this.playerHealth + "%"); // Обновляем индикатор здоровья игрока
+          // Удаляем зелье из текущей клетки на странице
+          $(".tileHP").removeClass("tileHP").addClass("tile");
+          // Обновляем клетку на карте, чтобы зелье было использовано
+          map[newY][newX] = "tile";
+        }
+        if (newTile === "sword") {
+          // Плитка с мечом - увеличиваем урон игрока
+          this.playerDamage += 25;
+          // Удаляем меч из текущей клетки на странице
+          $(".tileSW").removeClass("tileSW").addClass("tile");
+          // Обновляем клетку на карте, чтобы меч был использован
+          map[newY][newX] = "tile";
+        }
+
+        // Обновляем позицию игрока на карте
+        map[playerY][playerX] = "tile";
+        playerX = newX;
+        playerY = newY;
+        map[playerY][playerX] = "player";
+
+        this.moveEnemies(map);
+        this.drawMap(map); // Отрисовываем карту после перемещения игрока
+      }
     }
   }
 
@@ -427,20 +448,11 @@ class Game {
       { x: playerX, y: playerY - 1 }, // Сверху
       { x: playerX, y: playerY + 1 }, // Снизу
     ];
-    console.log(playerPosition);
+
     adjacentCells.forEach((cell) => {
       const x = cell.x;
       const y = cell.y;
-      console.log(
-        "Player X:",
-        playerX,
-        "Player Y:",
-        playerY,
-        "Cell X:",
-        x,
-        "Cell Y:",
-        y
-      ); // Вывод координат в консоль
+
       if (map[y] && map[y][x] === "enemy") {
         const enemyPosition = { x: x, y: y };
         // Рассчитываем расстояние между игроком и противником
@@ -502,12 +514,12 @@ class Game {
           // Убеждаемся, что у противника есть класс ".damage"
           if (enemyTile.hasClass("damage")) {
             // Уменьшаем здоровье противника на 50%
-            this.enemyHealth -= 50;
+            this.enemyHealth -= this.playerDamage;
 
             // Обновляем здоровье противника на экране
             enemyTile.children(".health").css("width", this.enemyHealth + "%");
             // alert("-50 Xp");
-            if (this.enemyHealth === 0) {
+            if (this.enemyHealth <= 0) {
               map[y][x] = "tile"; // Убираем соперника с поля
               enemyTile.removeClass("tileE"); // Удаляем класс противника
               enemyTile.removeClass("damage"); // Удаляем класс ".damage"
