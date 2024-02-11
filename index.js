@@ -8,7 +8,8 @@ let playerX, playerY;
 // Определение класса Game
 class Game {
   constructor() {
-    // Создаем экземпляр игры
+    this.playerHealth = 100; // Устанавливаем начальное здоровье игрока
+    this.enemyHealth = 100; // Устанавливаем начальное здоровье противников
   }
 
   init() {
@@ -28,32 +29,42 @@ class Game {
       });
     });
 
+    let lastKeyPressTime = 0;
+
     // Изменяем обработчик событий клавиш
     $(document).keydown((e) => {
-      // Получаем код нажатой клавиши
-      const key = e.key;
+      const currentTime = new Date().getTime();
 
-      // Перемещаем игрока в зависимости от нажатой клавиши
-      switch (key) {
-        case "ц":
-        case "w": // Вверх
-          this.movePlayer(map, -1, 0);
-          break;
-        case "ы":
-        case "s": // Вниз
-          this.movePlayer(map, 1, 0);
-          break;
-        case "ф":
-        case "a": // Влево
-          this.movePlayer(map, 0, -1);
-          break;
-        case "в":
-        case "d": // Вправо
-          this.movePlayer(map, 0, 1);
-          break;
-        case " ": // Пробел
-          this.attack(map);
-          break;
+      // Проверяем, прошла ли секунда с момента последнего нажатия
+      if (currentTime - lastKeyPressTime >= 100) {
+        // Обновляем время последнего нажатия
+        lastKeyPressTime = currentTime;
+
+        // Получаем код нажатой клавиши
+        const key = e.key;
+
+        // Перемещаем игрока в зависимости от нажатой клавиши
+        switch (key) {
+          case "ц":
+          case "w": // Вверх
+            this.movePlayer(map, -1, 0);
+            break;
+          case "ы":
+          case "s": // Вниз
+            this.movePlayer(map, 1, 0);
+            break;
+          case "ф":
+          case "a": // Влево
+            this.movePlayer(map, 0, -1);
+            break;
+          case "в":
+          case "d": // Вправо
+            this.movePlayer(map, 0, 1);
+            break;
+          case " ": // Пробел
+            this.attack(map);
+            break;
+        }
       }
     });
   }
@@ -256,6 +267,7 @@ class Game {
   }
 
   // Определение метода для отрисовки карты
+  // Определение метода для отрисовки карты с учетом здоровья
   drawMap(map) {
     const field = $(".field");
 
@@ -264,21 +276,30 @@ class Game {
         const tile = $("<div></div>");
         tile.addClass("tile");
         if (cell === "wall") {
-          tile.addClass("tileW"); // добавляем класс для стены
+          tile.addClass("tileW");
         } else if (cell === "sword") {
-          tile.addClass("tileSW"); // добавляем класс для меча
+          tile.addClass("tileSW");
         } else if (cell === "potion") {
-          tile.addClass("tileHP"); // добавляем класс для зелья
+          tile.addClass("tileHP");
         } else if (cell === "enemy") {
-          tile.addClass("tileE"); // добавляем класс для зелья
+          tile.addClass("tileE");
+          // Добавляем здоровье противника внутрь клетки
+          tile.append(
+            `<div class="health" style="width: ${this.enemyHealth}%;"></div>`
+          );
         } else if (cell === "player") {
-          tile.addClass("tileP"); // добавляем класс для зелья
+          tile.addClass("tileP");
+          // Добавляем здоровье игрока внутрь клетки
+          const playerHealth = this.playerHealth <= 0 ? 0 : this.playerHealth; // Исправление здесь
+          tile.append(
+            `<div class="health" style="width: ${playerHealth}%;"></div>`
+          ); // Исправление здесь
         }
-        tile.css("width", "20px"); // устанавливаем ширину
-        tile.css("height", "20px"); // устанавливаем высоту
-        tile.css("top", y * 20 + "px"); // устанавливаем вертикальное положение
-        tile.css("left", x * 20 + "px"); // устанавливаем горизонтальное положение
-        tile.appendTo(field); // добавляем блок в поле
+        tile.css("width", "20px");
+        tile.css("height", "20px");
+        tile.css("top", y * 20 + "px");
+        tile.css("left", x * 20 + "px");
+        tile.appendTo(field);
       });
     });
   }
@@ -374,10 +395,64 @@ class Game {
         // Перемещаем противника
         map[y][x] = "tile";
         map[newY][newX] = "enemy";
+
+        // Проверяем наличие игрока в смежных клетках
+        const playerAdjacent = [
+          { y: y - 1, x }, // Сверху
+          { y: y + 1, x }, // Снизу
+          { y, x: x - 1 }, // Слева
+          { y, x: x + 1 }, // Справа
+        ];
+
+        playerAdjacent.forEach((cell) => {
+          const px = cell.x;
+          const py = cell.y;
+
+          // Проверяем, находится ли в этой клетке игрок
+          if (map[py] && map[py][px] === "player") {
+            // Если игрок найден, вызываем метод атаки
+            this.attackPlayer(map);
+          }
+        });
       }
     });
 
     this.drawMap(map); // Отрисовываем карту после перемещения противников
+  }
+
+  attackPlayer(map) {
+    const adjacentCells = [
+      { x: playerX - 1, y: playerY }, // Слева
+      { x: playerX + 1, y: playerY }, // Справа
+      { x: playerX, y: playerY - 1 }, // Сверху
+      { x: playerX, y: playerY + 1 }, // Снизу
+    ];
+
+    adjacentCells.forEach((cell) => {
+      const x = cell.x;
+      const y = cell.y;
+
+      // Проверяем, находится ли клетка в пределах карты
+      if (x >= 0 && x < map[0].length && y >= 0 && y < map.length) {
+        if (map[y][x] === "player") {
+          // Уменьшаем здоровье противника на 50%
+          this.playerHealth -= 50;
+          this.playerHealth.css("width", this.playerHealth + "%");
+          if (this.playerHealth > 0) {
+            setTimeout(() => {
+              alert("-50 Xp");
+            }, 500);
+          } else {
+            setTimeout(() => {
+              alert("Game Over!");
+            }, 500);
+          }
+        }
+      }
+    });
+
+    // Отрисовываем обновленную карту
+    this.drawMap(map);
   }
 
   attack(map) {
@@ -391,19 +466,28 @@ class Game {
       { x: playerX - 1, y: playerY - 1 }, // Слева-сверху
       { x: playerX + 1, y: playerY + 1 }, // Справа-снизу
     ];
+
     adjacentCells.forEach((cell) => {
       const x = cell.x;
       const y = cell.y;
 
       // Проверяем, находится ли в этой клетке соперник
       if (map[y][x] === "enemy") {
-        // Если соперник найден, меняем его на обычную проходимую клетку
-        map[y][x] = "tile";
-        const EnemyTile = $(".tileE");
-        EnemyTile.removeClass("tileE");
-        EnemyTile.addClass("tile"); // Возвращаем клетке класс "tile"
+        if (this.enemyHealth > 0) {
+          const enemyTile = $(".tileE"); // Находим элемент DOM противника
+          // Уменьшаем здоровье противника на 50%
+          this.enemyHealth -= 50;
+
+          // Обновляем здоровье противника на экране
+          enemyTile.children(".health").css("width", this.enemyHealth + "%");
+        } else {
+          map[y][x] = "tile"; // Убираем соперника с поля
+          enemyTile.removeClass("tileE"); // Удаляем класс противника
+          enemyTile.addClass("tile"); // Добавляем класс пустой клетки
+        }
       }
     });
+
     // Обновляем карту и отрисовываем ее заново
     this.drawMap(map); // Отрисовываем карту
   }
