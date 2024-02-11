@@ -4,6 +4,7 @@ function getRandomInt(min, max) {
 }
 
 let playerX, playerY;
+
 // Определение класса Game
 class Game {
   constructor() {
@@ -27,83 +28,32 @@ class Game {
       });
     });
 
-    // Обработчик события нажатия клавиш
+    // Изменяем обработчик событий клавиш
     $(document).keydown((e) => {
       // Получаем код нажатой клавиши
       const key = e.key;
 
-      // Определяем координаты клеток вокруг игрока
-      const adjacentCells = [
-        { x: playerX - 1, y: playerY }, // Слева
-        { x: playerX + 1, y: playerY }, // Справа
-        { x: playerX, y: playerY - 1 }, // Сверху
-        { x: playerX, y: playerY + 1 }, // Снизу
-        { x: playerX - 1, y: playerY + 1 }, // Слева-снизу
-        { x: playerX + 1, y: playerY - 1 }, // Справа-сверху
-        { x: playerX - 1, y: playerY - 1 }, // Слева-сверху
-        { x: playerX + 1, y: playerY + 1 }, // Справа-снизу
-      ];
-
       // Перемещаем игрока в зависимости от нажатой клавиши
       switch (key) {
+        case "ц":
         case "w": // Вверх
-          if (map[playerY - 1][playerX] === "tile") {
-            // Если клетка над игроком является проходимой
-            // Обновляем карту и отрисовываем ее заново
-            map[playerY][playerX] = "tile";
-            playerY--;
-            map[playerY][playerX] = "player";
-            field.empty(); // Очищаем поле
-            this.drawMap(map); // Отрисовываем карту
-          }
+          this.movePlayer(map, -1, 0);
           break;
+        case "ы":
         case "s": // Вниз
-          if (map[playerY + 1][playerX] === "tile") {
-            // Если клетка под игроком является проходимой
-            // Обновляем карту и отрисовываем ее заново
-            map[playerY][playerX] = "tile";
-            playerY++;
-            map[playerY][playerX] = "player";
-            field.empty(); // Очищаем поле
-            this.drawMap(map); // Отрисовываем карту
-          }
+          this.movePlayer(map, 1, 0);
           break;
+        case "ф":
         case "a": // Влево
-          if (map[playerY][playerX - 1] === "tile") {
-            // Если клетка слева от игрока является проходимой
-            // Обновляем карту и отрисовываем ее заново
-            map[playerY][playerX] = "tile";
-            playerX--;
-            map[playerY][playerX] = "player";
-            field.empty(); // Очищаем поле
-            this.drawMap(map); // Отрисовываем карту
-          }
+          this.movePlayer(map, 0, -1);
           break;
+        case "в":
         case "d": // Вправо
-          if (map[playerY][playerX + 1] === "tile") {
-            // Если клетка справа от игрока является проходимой
-            // Обновляем карту и отрисовываем ее заново
-            map[playerY][playerX] = "tile";
-            playerX++;
-            map[playerY][playerX] = "player";
-            field.empty(); // Очищаем поле
-            this.drawMap(map); // Отрисовываем карту
-          }
+          this.movePlayer(map, 0, 1);
           break;
         case " ": // Пробел
-          adjacentCells.forEach((cell) => {
-            const x = cell.x;
-            const y = cell.y;
-
-            // Проверяем, находится ли в этой клетке соперник
-            if (map[y][x] === "enemy") {
-              // Если соперник найден, меняем его на обычную проходимую клетку
-              map[y][x] = "tile";
-            }
-          });
-          // Обновляем карту и отрисовываем ее заново
-          field.empty(); // Очищаем поле
-          this.drawMap(map); // Отрисовываем карту
+          this.attack(map);
+          break;
       }
     });
   }
@@ -332,6 +282,7 @@ class Game {
       });
     });
   }
+
   // Определение метода для создания комнаты или коридора
   createRoomOrCorridor(map, startX, startY, width, height) {
     for (let x = startX; x < startX + width; x++) {
@@ -341,5 +292,119 @@ class Game {
         }
       }
     }
+  }
+
+  movePlayer(map, deltaY, deltaX) {
+    const newX = playerX + deltaX;
+    const newY = playerY + deltaY;
+
+    if (
+      newX >= 0 &&
+      newX < map[0].length &&
+      newY >= 0 &&
+      newY < map.length &&
+      map[newY][newX] === "tile"
+    ) {
+      // Удаляем изображение игрока из старой клетки
+      const oldPlayerTile = $(".tileP");
+      oldPlayerTile.removeClass("tileP");
+      oldPlayerTile.addClass("tile"); // Возвращаем клетке класс "tile"
+
+      map[playerY][playerX] = "tile"; // Обновляем карту
+      playerX = newX;
+      playerY = newY;
+      map[playerY][playerX] = "player"; // Обновляем позицию игрока на карте
+
+      this.moveEnemies(map);
+      this.drawMap(map); // Отрисовываем карту после перемещения игрока
+    } else if (
+      newY >= 0 &&
+      newY < map.length &&
+      newX >= 0 &&
+      newX < map[0].length &&
+      map[newY][newX] === "enemy"
+    ) {
+      alert("Game over!");
+    }
+  }
+
+  moveEnemies(map) {
+    const directions = [
+      { deltaY: -1, deltaX: 0 }, // Вверх
+      { deltaY: 1, deltaX: 0 }, // Вниз
+      { deltaY: 0, deltaX: -1 }, // Влево
+      { deltaY: 0, deltaX: 1 }, // Вправо
+    ];
+
+    // Создадим список противников, которые еще не двигались в этом ходу
+    const enemiesToMove = [];
+
+    // Перебираем всех противников на карте
+    for (let y = 0; y < map.length; y++) {
+      for (let x = 0; x < map[y].length; x++) {
+        if (map[y][x] === "enemy") {
+          enemiesToMove.push({ y, x }); // Добавляем координаты противника в список
+        }
+      }
+    }
+
+    // Перемещаем каждого противника
+    enemiesToMove.forEach(({ y, x }) => {
+      // Выбираем случайное направление для перемещения
+      const randomDirection =
+        directions[Math.floor(Math.random() * directions.length)];
+
+      // Вычисляем новые координаты для противника
+      const newY = y + randomDirection.deltaY;
+      const newX = x + randomDirection.deltaX;
+
+      // Проверяем, чтобы новая позиция была на карте и являлась проходимой
+      if (
+        newY >= 0 &&
+        newY < map.length &&
+        newX >= 0 &&
+        newX < map[y].length &&
+        map[newY][newX] === "tile"
+      ) {
+        // Удаляем изображение противника из предыдущей клетки
+        const oldEnemyTile = $(".tileE");
+        oldEnemyTile.removeClass("tileE");
+        oldEnemyTile.addClass("tile"); // Возвращаем клетке класс "tile"
+
+        // Перемещаем противника
+        map[y][x] = "tile";
+        map[newY][newX] = "enemy";
+      }
+    });
+
+    this.drawMap(map); // Отрисовываем карту после перемещения противников
+  }
+
+  attack(map) {
+    const adjacentCells = [
+      { x: playerX - 1, y: playerY }, // Слева
+      { x: playerX + 1, y: playerY }, // Справа
+      { x: playerX, y: playerY - 1 }, // Сверху
+      { x: playerX, y: playerY + 1 }, // Снизу
+      { x: playerX - 1, y: playerY + 1 }, // Слева-снизу
+      { x: playerX + 1, y: playerY - 1 }, // Справа-сверху
+      { x: playerX - 1, y: playerY - 1 }, // Слева-сверху
+      { x: playerX + 1, y: playerY + 1 }, // Справа-снизу
+    ];
+    adjacentCells.forEach((cell) => {
+      const x = cell.x;
+      const y = cell.y;
+
+      // Проверяем, находится ли в этой клетке соперник
+      if (map[y][x] === "enemy") {
+        // Если соперник найден, меняем его на обычную проходимую клетку
+        map[y][x] = "tile";
+        const EnemyTile = $(".tileE");
+        EnemyTile.removeClass("tileE");
+        EnemyTile.addClass("tile"); // Возвращаем клетке класс "tile"
+      }
+    });
+    // Обновляем карту и отрисовываем ее заново
+    this.drawMap(map); // Отрисовываем карту
   }
 }
