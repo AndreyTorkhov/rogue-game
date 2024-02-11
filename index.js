@@ -338,14 +338,6 @@ class Game {
 
       this.moveEnemies(map);
       this.drawMap(map); // Отрисовываем карту после перемещения игрока
-    } else if (
-      newY >= 0 &&
-      newY < map.length &&
-      newX >= 0 &&
-      newX < map[0].length &&
-      map[newY][newX] === "enemy"
-    ) {
-      alert("Game over!");
     }
   }
 
@@ -371,49 +363,54 @@ class Game {
 
     // Перемещаем каждого противника
     enemiesToMove.forEach(({ y, x }) => {
-      // Выбираем случайное направление для перемещения
-      const randomDirection =
-        directions[Math.floor(Math.random() * directions.length)];
+      // Проверяем наличие игрока в смежных клетках
+      const playerAdjacent = [
+        { y: y - 1, x }, // Сверху
+        { y: y + 1, x }, // Снизу
+        { y, x: x - 1 }, // Слева
+        { y, x: x + 1 }, // Справа
+      ];
 
-      // Вычисляем новые координаты для противника
-      const newY = y + randomDirection.deltaY;
-      const newX = x + randomDirection.deltaX;
+      let playerAttacked = false;
+      playerAdjacent.forEach((cell) => {
+        const px = cell.x;
+        const py = cell.y;
 
-      // Проверяем, чтобы новая позиция была на карте и являлась проходимой
-      if (
-        newY >= 0 &&
-        newY < map.length &&
-        newX >= 0 &&
-        newX < map[y].length &&
-        map[newY][newX] === "tile"
-      ) {
-        // Удаляем изображение противника из предыдущей клетки
-        const oldEnemyTile = $(".tileE");
-        oldEnemyTile.removeClass("tileE");
-        oldEnemyTile.addClass("tile"); // Возвращаем клетке класс "tile"
+        // Проверяем, находится ли в этой клетке игрок
+        if (map[py] && map[py][px] === "player") {
+          // Если игрок найден, вызываем метод атаки
+          this.attackPlayer(map);
+          playerAttacked = true;
+        }
+      });
 
-        // Перемещаем противника
-        map[y][x] = "tile";
-        map[newY][newX] = "enemy";
+      // Проверяем, был ли атакован игрок перед перемещением противника
+      if (!playerAttacked) {
+        // Выбираем случайное направление для перемещения
+        const randomDirection =
+          directions[Math.floor(Math.random() * directions.length)];
 
-        // Проверяем наличие игрока в смежных клетках
-        const playerAdjacent = [
-          { y: y - 1, x }, // Сверху
-          { y: y + 1, x }, // Снизу
-          { y, x: x - 1 }, // Слева
-          { y, x: x + 1 }, // Справа
-        ];
+        // Вычисляем новые координаты для противника
+        const newY = y + randomDirection.deltaY;
+        const newX = x + randomDirection.deltaX;
 
-        playerAdjacent.forEach((cell) => {
-          const px = cell.x;
-          const py = cell.y;
+        // Проверяем, чтобы новая позиция была на карте и являлась проходимой
+        if (
+          newY >= 0 &&
+          newY < map.length &&
+          newX >= 0 &&
+          newX < map[y].length &&
+          map[newY][newX] === "tile"
+        ) {
+          // Удаляем изображение противника из предыдущей клетки
+          const oldEnemyTile = $(".tileE");
+          oldEnemyTile.removeClass("tileE");
+          oldEnemyTile.addClass("tile"); // Возвращаем клетке класс "tile"
 
-          // Проверяем, находится ли в этой клетке игрок
-          if (map[py] && map[py][px] === "player") {
-            // Если игрок найден, вызываем метод атаки
-            this.attackPlayer(map);
-          }
-        });
+          // Перемещаем противника
+          map[y][x] = "tile";
+          map[newY][newX] = "enemy";
+        }
       }
     });
 
@@ -421,30 +418,44 @@ class Game {
   }
 
   attackPlayer(map) {
+    const playerPosition = { x: playerX, y: playerY };
+
+    const playerTile = $(`.tileP`); // Выбираем только элемент противника на текущей клетке
     const adjacentCells = [
       { x: playerX - 1, y: playerY }, // Слева
       { x: playerX + 1, y: playerY }, // Справа
       { x: playerX, y: playerY - 1 }, // Сверху
       { x: playerX, y: playerY + 1 }, // Снизу
     ];
-
+    console.log(playerPosition);
     adjacentCells.forEach((cell) => {
       const x = cell.x;
       const y = cell.y;
-
-      // Проверяем, находится ли клетка в пределах карты
-      if (x >= 0 && x < map[0].length && y >= 0 && y < map.length) {
-        if (map[y][x] === "player") {
-          // Уменьшаем здоровье противника на 50%
+      console.log(
+        "Player X:",
+        playerX,
+        "Player Y:",
+        playerY,
+        "Cell X:",
+        x,
+        "Cell Y:",
+        y
+      ); // Вывод координат в консоль
+      if (map[y] && map[y][x] === "enemy") {
+        const enemyPosition = { x: x, y: y };
+        // Рассчитываем расстояние между игроком и противником
+        const distance =
+          Math.abs(playerPosition.x - enemyPosition.x) +
+          Math.abs(playerPosition.y - enemyPosition.y);
+        if (distance <= 1) {
           this.playerHealth -= 50;
-          this.playerHealth.css("width", this.playerHealth + "%");
-          if (this.playerHealth > 0) {
+          playerTile.children(".health").css("width", this.playerHealth + "%"); // Предполагается, что у игрока есть свойство "player" с классом "player"
+          setTimeout(() => {
+            alert("У вас осталось " + this.playerHealth + " здоровья");
+          }, 500);
+          if (this.playerHealth === 0) {
             setTimeout(() => {
-              alert("-50 Xp");
-            }, 500);
-          } else {
-            setTimeout(() => {
-              alert("Game Over!");
+              alert("Игра окончена!");
             }, 500);
           }
         }
@@ -495,7 +506,7 @@ class Game {
 
             // Обновляем здоровье противника на экране
             enemyTile.children(".health").css("width", this.enemyHealth + "%");
-            alert("-50 Xp");
+            // alert("-50 Xp");
             if (this.enemyHealth === 0) {
               map[y][x] = "tile"; // Убираем соперника с поля
               enemyTile.removeClass("tileE"); // Удаляем класс противника
