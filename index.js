@@ -1,16 +1,33 @@
-// Функция для генерации случайного целого числа в заданном диапазоне
-function getRandomInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-let playerX, playerY;
-
 // Определение класса Game
 class Game {
   constructor() {
-    this.playerHealth = 100; // Устанавливаем начальное здоровье игрока
-    this.enemyHealth = 100; // Устанавливаем начальное здоровье противников
+    this.playerHealth = 100;
+    this.enemyHealth = 100;
     this.playerDamage = 50;
+    this.playX = null;
+    this.playY = null;
+  }
+
+  getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  getAdjacentCells(x, y) {
+    return [
+      { x: x - 1, y },
+      { x: x + 1, y },
+      { x, y: y - 1 },
+      { x, y: y + 1 },
+    ];
+  }
+  // Сбрасываем состояние игры
+  resetGame() {
+    this.playerHealth = 100;
+    this.playerDamage = 50;
+    this.enemyHealth = 100;
+    this.playX = 0;
+    this.playY = 0;
+    location.reload();
   }
 
   init() {
@@ -20,12 +37,11 @@ class Game {
     const field = $(".field");
 
     // Сохраняем начальные координаты игрока
-    playerX, playerY;
     map.forEach((row, y) => {
       row.forEach((cell, x) => {
         if (cell === "player") {
-          playerX = x;
-          playerY = y;
+          this.playX = x;
+          this.playY = y;
         }
       });
     });
@@ -36,33 +52,29 @@ class Game {
     $(document).keydown((e) => {
       const currentTime = new Date().getTime();
 
-      // Проверяем, прошла ли секунда с момента последнего нажатия
       if (currentTime - lastKeyPressTime >= 250) {
-        // Обновляем время последнего нажатия
         lastKeyPressTime = currentTime;
-
-        // Получаем код нажатой клавиши
         const key = e.key;
 
         // Перемещаем игрока в зависимости от нажатой клавиши
         switch (key) {
           case "ц":
-          case "w": // Вверх
+          case "w":
             this.movePlayer(map, -1, 0);
             break;
           case "ы":
-          case "s": // Вниз
+          case "s":
             this.movePlayer(map, 1, 0);
             break;
           case "ф":
-          case "a": // Влево
+          case "a":
             this.movePlayer(map, 0, -1);
             break;
           case "в":
-          case "d": // Вправо
+          case "d":
             this.movePlayer(map, 0, 1);
             break;
-          case " ": // Пробел
+          case " ":
             this.attack(map);
             break;
         }
@@ -76,33 +88,31 @@ class Game {
     const cols = 40;
     const map = [];
 
-    // Создание двумерного массива и заполнение его стенами
     for (let i = 0; i < rows; i++) {
       const row = [];
       for (let j = 0; j < cols; j++) {
-        row.push("wall"); // заполняем каждую ячейку стеной
+        row.push("wall");
       }
       map.push(row);
     }
 
-    const corridors = []; // Массив для хранения координат коридоров
+    const corridors = [];
 
     // Генерация коридоров по вертикали
-    const numHallV = getRandomInt(3, 5);
+    const numHallV = this.getRandomInt(3, 5);
     for (let i = 0; i < numHallV; i++) {
       let hallLineX, hallLineY, hallWidth, hallHeight;
-      let validCorridor = false; // Флаг для проверки валидности коридора
+      let validCorridor = false;
       do {
-        hallLineX = getRandomInt(1, cols - 1);
+        hallLineX = this.getRandomInt(1, cols - 1);
         hallLineY = 0;
         hallWidth = 1;
         hallHeight = rows;
-        // Проверяем, что текущий коридор находится достаточно далеко от других коридоров
         validCorridor = corridors.every(
           (corridor) => Math.abs(hallLineX - corridor.x) >= 2
         );
       } while (
-        !validCorridor || // Пока коридор не прошел проверку на расстояние между соседними коридорами
+        !validCorridor ||
         map
           .slice(hallLineY - 1, hallLineY + hallHeight + 1)
           .some((row) =>
@@ -128,13 +138,13 @@ class Game {
     }
 
     // Генерация коридоров по горизонтали
-    const numHallH = getRandomInt(3, 5);
+    const numHallH = this.getRandomInt(3, 5);
     for (let i = 0; i < numHallH; i++) {
       let hallLineX, hallLineY, hallWidth, hallHeight;
-      let validCorridor = false; // Флаг для проверки валидности коридора
+      let validCorridor = false;
       do {
         hallLineX = 0;
-        hallLineY = getRandomInt(1, rows - 1);
+        hallLineY = this.getRandomInt(1, rows - 1);
         hallWidth = cols;
         hallHeight = 1;
         validCorridor = corridors.every(
@@ -167,30 +177,23 @@ class Game {
     // Генерация комнат
     const numRooms = 10;
     let numRoomsGenerated = 0;
-    const existingRooms = []; // Массив для хранения существующих комнат
+    const existingRooms = [];
 
     for (let i = 0; i < numRooms; i++) {
       let roomX, roomY, roomWidth, roomHeight;
       let connected = false;
-
-      // Выбираем случайный коридор
-      const corridor = corridors[getRandomInt(0, corridors.length - 1)];
-
-      // Определяем координаты и размеры комнаты
+      const corridor = corridors[this.getRandomInt(0, corridors.length - 1)];
       // Генерируем координаты комнаты в пределах коридора с учетом размеров самой комнаты
-      roomX = getRandomInt(corridor.x, corridor.x + corridor.width);
-      roomY = getRandomInt(corridor.y, corridor.y + corridor.height);
-      roomWidth = getRandomInt(3, 8);
-      roomHeight = getRandomInt(3, 8);
-
-      // Проверяем, чтобы комната не вышла за пределы карты
+      roomX = this.getRandomInt(corridor.x, corridor.x + corridor.width);
+      roomY = this.getRandomInt(corridor.y, corridor.y + corridor.height);
+      roomWidth = this.getRandomInt(3, 8);
+      roomHeight = this.getRandomInt(3, 8);
       if (
         roomX >= 0 &&
         roomY >= 0 &&
         roomX + roomWidth - 3 < cols &&
         roomY + roomHeight - 3 < rows
       ) {
-        // Проверяем, чтобы новая комната не пересекалась с уже существующими комнатами
         let intersects = false;
         for (const existingRoom of existingRooms) {
           if (
@@ -227,48 +230,47 @@ class Game {
       }
     }
 
-    const numSwords = 2; // Количество мечей
-    const numPotions = 10; // Количество зелий
-    const numEnemys = 10; //Количество противников
+    const numSwords = 2;
+    const numPotions = 10;
+    const numEnemys = 10;
+    let swordX, swordY;
+    let potionX, potionY;
+    let enemyX, enemyY;
 
     for (let i = 0; i < numSwords; i++) {
-      let swordX, swordY;
       do {
-        swordX = getRandomInt(0, cols - 1);
-        swordY = getRandomInt(0, rows - 1);
-      } while (map[swordY][swordX] !== "tile"); // Проверяем, что выбранная позиция находится в проходимой области
-      map[swordY][swordX] = "sword"; // Обозначаем позицию меча на карте
+        swordX = this.getRandomInt(0, cols - 1);
+        swordY = this.getRandomInt(0, rows - 1);
+      } while (map[swordY][swordX] !== "tile");
+      map[swordY][swordX] = "sword";
     }
 
     for (let i = 0; i < numPotions; i++) {
-      let potionX, potionY;
       do {
-        potionX = getRandomInt(0, cols - 1);
-        potionY = getRandomInt(0, rows - 1);
-      } while (map[potionY][potionX] !== "tile"); // Проверяем, что выбранная позиция находится в проходимой области
-      map[potionY][potionX] = "potion"; // Обозначаем позицию зелья на карте
+        potionX = this.getRandomInt(0, cols - 1);
+        potionY = this.getRandomInt(0, rows - 1);
+      } while (map[potionY][potionX] !== "tile");
+      map[potionY][potionX] = "potion";
     }
 
     for (let i = 0; i < numEnemys; i++) {
-      let enemyX, enemyY;
       do {
-        enemyX = getRandomInt(0, cols - 1);
-        enemyY = getRandomInt(0, rows - 1);
-      } while (map[enemyY][enemyX] !== "tile"); // Проверяем, что выбранная позиция находится в проходимой области
-      map[enemyY][enemyX] = "enemy"; // Обозначаем позицию противника на карте
+        enemyX = this.getRandomInt(0, cols - 1);
+        enemyY = this.getRandomInt(0, rows - 1);
+      } while (map[enemyY][enemyX] !== "tile");
+      map[enemyY][enemyX] = "enemy";
     }
 
     do {
-      playerX = getRandomInt(0, cols - 1);
-      playerY = getRandomInt(0, rows - 1);
-    } while (map[playerY][playerX] !== "tile"); // Проверяем, что выбранная позиция находится в проходимой области
-    map[playerY][playerX] = "player"; // Обозначаем позицию игрока на карте
+      this.playerX = this.getRandomInt(0, cols - 1);
+      this.playerY = this.getRandomInt(0, rows - 1);
+    } while (map[this.playerY][this.playerX] !== "tile");
+    map[this.playerY][this.playerX] = "player";
 
     return map;
   }
 
   // Определение метода для отрисовки карты
-  // Определение метода для отрисовки карты с учетом здоровья
   drawMap(map) {
     const field = $(".field");
 
@@ -318,8 +320,8 @@ class Game {
   }
 
   movePlayer(map, deltaY, deltaX) {
-    const newX = playerX + deltaX;
-    const newY = playerY + deltaY;
+    const newX = this.playX + deltaX;
+    const newY = this.playY + deltaY;
 
     if (newX >= 0 && newX < map[0].length && newY >= 0 && newY < map.length) {
       const newTile = map[newY][newX];
@@ -333,9 +335,7 @@ class Game {
 
         if (newTile === "potion") {
           // Плитка с зельем - лечим игрока
-          const playerTile = $(".tileP"); // Выбираем только элемент игрока на текущей клетке
           this.playerHealth = 100; // Предполагается, что 100 - максимальное здоровье
-          playerTile.children(".health").css("width", this.playerHealth + "%"); // Обновляем индикатор здоровья игрока
           // Удаляем зелье из текущей клетки на странице
           $(".tileHP").removeClass("tileHP").addClass("tile");
           // Обновляем клетку на карте, чтобы зелье было использовано
@@ -351,10 +351,10 @@ class Game {
         }
 
         // Обновляем позицию игрока на карте
-        map[playerY][playerX] = "tile";
-        playerX = newX;
-        playerY = newY;
-        map[playerY][playerX] = "player";
+        map[this.playY][this.playX] = "tile";
+        this.playX = newX;
+        this.playY = newY;
+        map[this.playY][this.playX] = "player";
 
         this.moveEnemies(map);
         this.drawMap(map); // Отрисовываем карту после перемещения игрока
@@ -385,12 +385,7 @@ class Game {
     // Перемещаем каждого противника
     enemiesToMove.forEach(({ y, x }) => {
       // Проверяем наличие игрока в смежных клетках
-      const playerAdjacent = [
-        { y: y - 1, x }, // Сверху
-        { y: y + 1, x }, // Снизу
-        { y, x: x - 1 }, // Слева
-        { y, x: x + 1 }, // Справа
-      ];
+      const playerAdjacent = this.getAdjacentCells(x, y);
 
       let playerAttacked = false;
       playerAdjacent.forEach((cell) => {
@@ -439,15 +434,10 @@ class Game {
   }
 
   attackPlayer(map) {
-    const playerPosition = { x: playerX, y: playerY };
+    const playerPosition = { x: this.playX, y: this.playY };
 
     const playerTile = $(`.tileP`); // Выбираем только элемент противника на текущей клетке
-    const adjacentCells = [
-      { x: playerX - 1, y: playerY }, // Слева
-      { x: playerX + 1, y: playerY }, // Справа
-      { x: playerX, y: playerY - 1 }, // Сверху
-      { x: playerX, y: playerY + 1 }, // Снизу
-    ];
+    const adjacentCells = this.getAdjacentCells(this.playX, this.playY);
 
     adjacentCells.forEach((cell) => {
       const x = cell.x;
@@ -462,9 +452,6 @@ class Game {
         if (distance <= 1) {
           this.playerHealth -= 50;
           playerTile.children(".health").css("width", this.playerHealth + "%"); // Предполагается, что у игрока есть свойство "player" с классом "player"
-          setTimeout(() => {
-            alert("У вас осталось " + this.playerHealth + " здоровья");
-          }, 500);
           if (this.playerHealth === 0) {
             setTimeout(() => {
               alert("Игра окончена!");
@@ -479,19 +466,11 @@ class Game {
   }
 
   attack(map) {
-    const playerPosition = { x: playerX, y: playerY };
+    const playerPosition = { x: this.playX, y: this.playY };
 
-    const adjacentCells = [
-      { x: playerX - 1, y: playerY }, // Слева
-      { x: playerX + 1, y: playerY }, // Справа
-      { x: playerX, y: playerY - 1 }, // Сверху
-      { x: playerX, y: playerY + 1 }, // Снизу
-      { x: playerX - 1, y: playerY - 1 }, // Слева
-      { x: playerX + 1, y: playerY + 1 }, // Справа
-      { x: playerX + 1, y: playerY - 1 }, // Сверху
-      { x: playerX - 1, y: playerY + 1 }, // Снизу
-    ];
+    const adjacentCells = this.getAdjacentCells(this.playX, this.playY);
 
+    let enemyCount = 0; // Счетчик соперников
     adjacentCells.forEach((cell) => {
       const x = cell.x;
       const y = cell.y;
@@ -518,18 +497,30 @@ class Game {
 
             // Обновляем здоровье противника на экране
             enemyTile.children(".health").css("width", this.enemyHealth + "%");
-            // alert("-50 Xp");
             if (this.enemyHealth <= 0) {
               map[y][x] = "tile"; // Убираем соперника с поля
               enemyTile.removeClass("tileE"); // Удаляем класс противника
               enemyTile.removeClass("damage"); // Удаляем класс ".damage"
               enemyTile.addClass("tile"); // Добавляем класс пустой клетки
               this.enemyHealth = 100;
+
+              enemyCount++; // Увеличиваем счетчик убитых соперников
             }
           }
         }
       }
     });
+
+    // Если у игрока закончилось здоровье или убиты все соперники, выводим сообщение и начинаем новую игру
+    if (this.playerHealth <= 0 || enemyCount === 10) {
+      setTimeout(() => {
+        alert("Игра окончена!");
+      }, 500);
+
+      // Сброс состояния игры
+      this.resetGame();
+      return; // Завершаем выполнение метода
+    }
 
     // Обновляем карту и отрисовываем ее заново
     this.drawMap(map);
