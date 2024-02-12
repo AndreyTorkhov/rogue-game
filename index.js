@@ -417,25 +417,19 @@ class Game {
         const enemyPosition = { x: x, y: y };
         const distance = this.distance(playerPosition, enemyPosition);
         if (distance <= 1) {
-          enemyTile.addClass("damage");
-          if (enemyTile.hasClass("damage")) {
-            this.enemyHealth -= this.playerDamage;
-            enemyTile.children(".health").css("width", this.enemyHealth + "%");
-            if (this.enemyHealth <= 0) {
-              map[y][x] = "tile"; // Убираем соперника с поля
-              enemyTile
-                .removeClass("tileE")
-                .removeClass("damage")
-                .addClass("tile");
-              this.enemyHealth = 100;
-              this.enemyCount++; // Увеличиваем счетчик убитых соперников
-              if (this.enemyCount === 10) {
-                alert("Игра окончена! Вы выиграли");
-                setTimeout(() => {
-                  this.resetGame();
-                  return;
-                }, 500);
-              }
+          this.enemyHealth -= this.playerDamage;
+          enemyTile.children(".health").css("width", this.enemyHealth + "%");
+          if (this.enemyHealth <= 0) {
+            map[y][x] = "tile"; // Убираем соперника с поля
+            enemyTile.removeClass("tileE").addClass("tile");
+            this.enemyHealth = 100;
+            this.enemyCount++; // Увеличиваем счетчик убитых соперников
+            if (this.enemyCount === 10) {
+              alert("Игра окончена! Вы выиграли");
+              setTimeout(() => {
+                this.resetGame();
+                return;
+              }, 500);
             }
           }
         }
